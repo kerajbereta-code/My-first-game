@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Highway Racer</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      background-color: #333;
+      display: block;
+      margin: 20px auto;
+      border: 4px solid #fff;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    .instructions {
+      font-size: 16px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>3D Highway Racer</h1>
+  <p class="instructions">Use <strong>Left/Right Arrow Keys</strong> or <strong>A/D Keys</strong> to steer!</p>
+  <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let score = 0;
+    let gameOver = false;
+    let playerX = canvas.width / 2 - 20;
+    const playerWidth = 40;
+    const playerHeight = 60;
+    let playerSpeed = 0;
+
+    let obstacles = [];
+    let roadOffset = 0;
+
+    const keys = {};
+
+    window.addEventListener('keydown', (e) => keys[e.key] = true);
+    window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+    function createObstacle() {
+      const laneWidth = canvas.width / 3;
+      const lane = Math.floor(Math.random() * 3);
+      obstacles.push({
+        x: lane * laneWidth + laneWidth / 2 - 20,
+        y: -60,
+        width: 40,
+        height: 60,
+        speed: 4 + Math.random() * 3
+      });
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      // Handle Steering
+      if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+        playerX -= 5;
+      }
+      if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+        playerX += 5;
+      }
+
+      // Keep car inside road bounds
+      if (playerX < 10) playerX = 10;
+      if (playerX > canvas.width - playerWidth - 10) playerX = canvas.width - playerWidth - 10;
+
+      // Road animation offset
+      roadOffset = (roadOffset + 8) % 40;
+
+      // Spawn obstacles
+      if (Math.random() < 0.03) {
+        createObstacle();
+      }
+
+      // Update obstacles
+      for (let i = 0; i < obstacles.length; i++) {
+        let obs = obstacles[i];
+        obs.y += obs.speed;
+
+        // Check Collision
+        if (
+          playerX < obs.x + obs.width &&
+          playerX + playerWidth > obs.x &&
+          canvas.height - 100 < obs.y + obs.height &&
+          canvas.height - 100 + playerHeight > obs.y
+        ) {
+          gameOver = true;
+        }
+
+        // Score points when passing obstacles
+        if (obs.y > canvas.height) {
+          obstacles.splice(i, 1);
+          score += 10;
+          i--;
+        }
+      }
+    }
+
+    function drawPseudo3DRoad() {
+      // Horizon / Sky
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(0, 0, canvas.width, 150);
+
+      // Road surface
+      ctx.fillStyle = '#374151';
+      ctx.beginPath();
+      ctx.moveTo(150, 150);
+      ctx.lineTo(250, 150);
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.fill();
+
+      // Moving road lines
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([20, 20]);
+      ctx.lineDashOffset = -roadOffset;
+
+      ctx.beginPath();
+      ctx.moveTo(200, 150);
+      ctx.lineTo(canvas.width / 2, canvas.height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPseudo3DRoad();
+
+      // Draw Player Car
+      ctx.fillStyle = '#ef4444'; // Red Car
+      ctx.fillRect(playerX, canvas.height - 100, playerWidth, playerHeight);
+      ctx.fillStyle = '#38bdf8'; // Windshield
+      ctx.fillRect(playerX + 5, canvas.height - 85, playerWidth - 10, 15);
+
+      // Draw Obstacle Cars
+      for (let obs of obstacles) {
+        ctx.fillStyle = '#3b82f6'; // Blue Car
+        ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        ctx.fillStyle = '#fef08a'; // Headlights
+        ctx.fillRect(obs.x + 5, obs.y + obs.height - 5, 8, 5);
+        ctx.fillRect(obs.x + obs.width - 13, obs.y + obs.height - 5, 8, 5);
+      }
+
+      // Draw Score
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '20px Arial';
+      ctx.fillText('Score: ' + score, 20, 35);
+
+      // Game Over Message
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '36px Arial';
+        ctx.fillText('GAME OVER', 90, 280);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '18px Arial';
+        ctx.fillText('Final Score: ' + score, 140, 320);
+        ctx.fillText('Refresh page to restart', 110, 360);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+  </script>
+
+</body>
+</html>
